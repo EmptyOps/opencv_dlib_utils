@@ -1,4 +1,5 @@
 import os, sys
+import numpy as np
 import argparse
 import dlib
 import subprocess
@@ -31,8 +32,7 @@ def resize( path ):
             outdir = os.path.join( path, filename+"_dir" )
             os.makedirs( outdir )
             os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( outdir, "output%d.jpeg" ) ) )
-
-            
+             
         else:
             continue
 
