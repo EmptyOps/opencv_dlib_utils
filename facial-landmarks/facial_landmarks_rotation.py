@@ -32,8 +32,6 @@ parser.add_argument('-p', '--shape-predictor', type=str, nargs='?',
 parser.add_argument('--dir_to_process', type=str, nargs='?',
                     help='dir_to_process')
 
-parser.add_argument('-o', '--out_to_csv_file',type=str, nargs='?',help='if provided output will be writtent to csv(semicolon separated) otherwise to stdout. ')
-
 FLAGS = parser.parse_args()
 
 

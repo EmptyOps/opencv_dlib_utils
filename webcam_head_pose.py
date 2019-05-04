@@ -4,7 +4,7 @@ import cv2
 import numpy as np
  
 # Read Image
-im = cv2.imread("./data/headPose.jpg");
+im = cv2.imread("headPose.jpg");
 size = im.shape
      
 #2D image points. If you change the image, you need to change vector
