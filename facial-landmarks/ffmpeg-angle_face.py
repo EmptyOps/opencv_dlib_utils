@@ -19,8 +19,9 @@ ext = (".avi", ".mp4")
 parser.add_argument('-p', '--shape-predictor', type=str, nargs='?',
     help='path to facial landmark predictor')
 
-parser.add_argument('--dir_to_process', type=str, nargs='?',
+parser.add_argument('-d', '--dir_to_process', type=str, nargs='?',
                     help='dir_to_process')
+parser.add_argument('-ik', '--is_keep_extracted_image', action='store_true', help='A boolean True False')
 
 FLAGS = parser.parse_args()
 
@@ -31,6 +32,16 @@ if FLAGS.dir_to_process == "":
     paths = []  #specify static here
 else:
     paths = [FLAGS.dir_to_process+"/"]
+
+def toint(str):
+  try:
+    return int(str)
+  except Exception as e:
+    return 0
+  else:
+    pass
+  finally:
+    pass
 
 def resize( path ):
     items = os.listdir(path)
@@ -43,9 +54,12 @@ def resize( path ):
             # os.makedirs( outdir )
             # os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, "output%d.jpeg" ) ) )
 
-            os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, filename+"%d.jpeg" )))     
+            #single image only for testing "-vframes 50"
+            os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, os.path.join( "images", "%d.jpeg" ) ) ) )     
 
-            items1 = os.listdir(path)
+            items1 = os.listdir( os.path.join( path, "images" ) ) 
+            items1 = sorted(items1,key=lambda x: toint(os.path.splitext(x)[0]))
+
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
             with open(os.path.join( path+"/out", filename+"_dir.csv"), 'wb' ) as file:
 
@@ -57,14 +71,15 @@ def resize( path ):
                     if (item.endswith('.jpeg')):
                       
                         # load the input image, resize it, and convert it to grayscale
-                        images = cv2.imread(path+item)
+                        images = cv2.imread( os.path.join( path, "images", item ) ) 
 
                         images = imutils.resize(images, width=500)
                         gray = cv2.cvtColor(images, cv2.COLOR_BGR2GRAY) 
-                        f, e = os.path.splitext(path+item)
+                        f, e = os.path.splitext( os.path.join( path, "images", item ) )
 
                         # Remove item into dir
-                        os.remove(path+item)
+                        if not FLAGS.is_keep_extracted_image:
+                          os.remove(os.path.join( path, "images", item ) )
 
                         rects = detector(gray, 1)
 
