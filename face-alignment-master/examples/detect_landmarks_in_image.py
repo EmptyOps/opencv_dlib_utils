@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from skimage import io
 
 # Run the 3D face alignment on a test image, without CUDA.
-fa = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, device='cpu',flip_input=True)
+fa = face_alignment.FaceAlignment(face_alignment.LandmarksType._3D, device='cpu',flip_input=False)
 
-input = io.imread('../test/assets/img1.jpeg')
+input = io.imread('../test/__assets/img1.jpeg')
 preds = fa.get_landmarks(input)[-1]
 # preds = fa.get_landmarks_from_directory('../test/assets/')[-1]
 
@@ -27,15 +27,15 @@ ax.plot(preds[60:68,0],preds[60:68,1],marker='o',markersize=6,linestyle='-',colo
 ax.axis('off')
 
 ax = fig.add_subplot(1, 2, 2, projection='3d')
-surf = ax.scatter(preds[:,0]*1.2,preds[:,1],c="cyan", alpha=1.0, edgecolor='b')
-ax.plot3D(preds[:17,0]*1.2,preds[:17,1], color='blue' )
-ax.plot3D(preds[17:22,0]*1.2,preds[17:22,1], color='blue')
-ax.plot3D(preds[22:27,0]*1.2,preds[22:27,1], color='blue')
-ax.plot3D(preds[27:31,0]*1.2,preds[27:31,1], color='blue')
-ax.plot3D(preds[31:36,0]*1.2,preds[31:36,1], color='blue')
-ax.plot3D(preds[36:42,0]*1.2,preds[36:42,1], color='blue')
-ax.plot3D(preds[42:48,0]*1.2,preds[42:48,1], color='blue')
-ax.plot3D(preds[48:,0]*1.2,preds[48:,1], color='blue' )
+surf = ax.scatter(preds[:,0]*1.2,preds[:,1],preds[:,2],c="cyan", alpha=1.0, edgecolor='b')
+ax.plot3D(preds[:17,0]*1.2,preds[:17,1], preds[:17,2], color='blue' )
+ax.plot3D(preds[17:22,0]*1.2,preds[17:22,1], preds[17:22,2],color='blue')
+ax.plot3D(preds[22:27,0]*1.2,preds[22:27,1],preds[22:27,2], color='blue')
+ax.plot3D(preds[27:31,0]*1.2,preds[27:31,1],preds[27:31,2], color='blue')
+ax.plot3D(preds[31:36,0]*1.2,preds[31:36,1],preds[31:36,2], color='blue')
+ax.plot3D(preds[36:42,0]*1.2,preds[36:42,1],preds[36:42,2], color='blue')
+ax.plot3D(preds[42:48,0]*1.2,preds[42:48,1],preds[42:48,1], color='blue')
+ax.plot3D(preds[48:,0]*1.2,preds[48:,1], preds[48:,2],color='blue' )
 
 ax.view_init(elev=90., azim=90.)
 ax.set_xlim(ax.get_xlim()[::-1])
@@ -43,6 +43,7 @@ ax.set_xlim(ax.get_xlim()[::-1])
 
 print("ax Print Her --",type(preds))
 print("Here_size",len(preds))
+print( preds )
 
 # with open(preds.out_to_csv_file , 'wb' ) as file:
 
