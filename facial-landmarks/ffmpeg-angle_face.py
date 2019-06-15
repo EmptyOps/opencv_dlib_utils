@@ -127,7 +127,7 @@ def resize( path ):
 
                                       images = imutils.resize(images, width=500)
                                       gray = cv2.cvtColor(images, cv2.COLOR_BGR2GRAY) 
-                                      f, e = os.path.splitext(root+"/"+item)
+                                      f, e, = os.path.splitext(root+"/"+item)
 
                                       # Remove item into dir
                                       os.remove(root+"/"+item)
