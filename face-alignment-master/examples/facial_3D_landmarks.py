@@ -125,13 +125,15 @@ def resize( path ):
                      
                       if (name.endswith(ext)): #or .avi, .mpeg, whatever.
 
-                         NewDir = "../__data/__images/"+name
+                         NewDir = "../__data/__images_1/"+name
                          if not os.path.exists(NewDir):
                             os.mkdir(NewDir)
+                            os.system("ffmpeg -i {0} -f image2 -vf fps=fps=10 {1}".format( os.path.join( path+filename, name ), os.path.join(NewDir, name+"%d.jpeg")))  
+                         else:
+                              continue
 
                          #os.system("ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path+filename, name ), os.path.join(NewDir, name+"%d.jpeg")))     
-                         os.system("ffmpeg -i {0} -f image2 -vf fps=fps=10 {1}".format( os.path.join( path+filename, name ), os.path.join(NewDir, name+"%d.jpeg")))     
-
+                            
                          items1 = os.listdir(NewDir+"/")
 
                          #hiren changed this on 19-06-2019
