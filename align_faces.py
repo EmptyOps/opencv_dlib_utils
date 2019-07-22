@@ -42,3 +42,5 @@ for rect in rects:
 	cv2.imshow("Original", faceOrig)
 	cv2.imshow("Aligned", faceAligned)
 	cv2.waitKey(0)
+
+#end
