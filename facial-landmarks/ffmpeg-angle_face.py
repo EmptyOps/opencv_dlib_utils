@@ -23,6 +23,16 @@ parser.add_argument('-d', '--dir_to_process', type=str, nargs='?',
                     help='dir_to_process')
 parser.add_argument('-ik', '--is_keep_extracted_image', action='store_true', help='A boolean True False')
 
+parser.add_argument('-f', '--fps', type=str, nargs='?',
+                    help='image extract per fps')
+parser.add_argument('-ikv', '--is_keep_video_file', action='store_true', help='A boolean True False')
+
+parser.add_argument('-oc', '--output_dir_for_csv_files', type=str, nargs='?',
+                    help='output_dir_for_csv_files')
+parser.add_argument('-oi', '--extracted_images_dir', type=str, nargs='?',
+                    help='os.path.join(FLAGS.oi, filename)')
+
+
 FLAGS = parser.parse_args()
 
 detector = dlib.get_frontal_face_detector()
@@ -43,6 +53,51 @@ def toint(str):
   finally:
     pass
 
+def get_rotation(csv_row):
+
+      rotation_vector = []
+
+      #
+      lStart = to_x_y( csv_row[17] )
+      lEnd = to_x_y( csv_row[21] )
+      rStart = to_x_y( csv_row[22] )
+      rEnd = to_x_y( csv_row[26] )
+
+      leftEyePts = np.array( [lStart,lEnd] )
+      rightEyePts = np.array( [rStart,rEnd] )
+
+      # compute the center of mass for each eye
+      leftEyeCenter = leftEyePts.mean(axis=0).astype("int")
+      rightEyeCenter = rightEyePts.mean(axis=0).astype("int")
+
+      # compute the angle between the eye centroids
+      dY = rightEyeCenter[1] - leftEyeCenter[1]
+      dX = rightEyeCenter[0] - leftEyeCenter[0]
+      rotation_vector.append( np.degrees(np.arctan2(dY, dX)) ) # - 180 )
+
+      #
+      l = to_x_y( csv_row[1] )
+      n = to_x_y( csv_row[33] )
+      r = to_x_y( csv_row[15] )
+
+      # compute the distances
+      dAngle = (r[0]-n[0]) - (n[0]-l[0])
+      dRatio = (r[0]-n[0]) * 2 if (r[0]-n[0]) > (n[0]-l[0]) else (n[0]-l[0]) * 2
+      rotation_vector.append( np.degrees(np.arctan2(dAngle, dRatio)) ) # - 180 )
+
+      rotation_vector.append( 0 )
+
+      return rotation_vector
+
+def scale_if_small(imgpath, min_width_limit, savepath, scale_by=2.5):
+  im = Image.open( imgpath )
+  if im.size[0] < min_width_limit:
+    basewidth = im.size[0] * scale
+    wpercent = (basewidth/float(im.size[0]))
+    hsize = int((float(im.size[1])*float(wpercent)))
+    im = im.resize((basewidth,hsize), Image.ANTIALIAS)
+    im.save(savepath) 
+
 def resize( path ):
     items = os.listdir(path)
 
@@ -53,15 +108,18 @@ def resize( path ):
             # outdir = os.path.join( path, filename+"_dir" )
             # os.makedirs( outdir )
             # os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, "output%d.jpeg" ) ) )
+            imgdir = os.path.join(FLAGS.oi, filename)
+            if not os.path.exists( imgdir ):
+              os.mkdir( imgdir )
 
             #single image only for testing "-vframes 50"
-            os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, os.path.join( "images", "%d.jpeg" ) ) ) )     
+            os.system( "ffmpeg -i {0} -f image2 -vf fps=fps="+FLAGS.fps+" {1}".format( os.path.join( path, filename ), os.path.join( imgdir, "%d.jpeg" ) ) )     
 
-            items1 = os.listdir( os.path.join( path, "images" ) ) 
+            items1 = os.listdir( imgdir ) 
             items1 = sorted(items1,key=lambda x: toint(os.path.splitext(x)[0]))
 
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
-            with open(os.path.join( path+"/out", filename+"_dir.csv"), 'wb' ) as file:
+            with open(os.path.join( FLAGS.oc, filename+".csv"), 'wb' ) as file:
 
                 for item in items1:
 
@@ -69,17 +127,21 @@ def resize( path ):
                        continue
 
                     if (item.endswith('.jpeg')):
-                      
-                        # load the input image, resize it, and convert it to grayscale
-                        images = cv2.imread( os.path.join( path, "images", item ) ) 
 
-                        images = imutils.resize(images, width=500)
+                        #
+                        imgpath = os.path.join( imgdir, item )
+                        scale_if_small(imgpath, 33, imgpath)
+
+                        # load the input image, resize it, and convert it to grayscale
+                        images = cv2.imread( imgpath ) 
+
+                        # images = imutils.resize(images, width=500)
                         gray = cv2.cvtColor(images, cv2.COLOR_BGR2GRAY) 
-                        f, e = os.path.splitext( os.path.join( path, "images", item ) )
+                        f, e = os.path.splitext( imgpath )
 
                         # Remove item into dir
                         if not FLAGS.is_keep_extracted_image:
-                          os.remove(os.path.join( path, "images", item ) )
+                          os.remove( imgpath )
 
                         rects = detector(gray, 1)
 
@@ -93,12 +155,29 @@ def resize( path ):
                             shape = predictor(gray, rect)
                             shape = face_utils.shape_to_np(shape)
 
+                            #
+                            rot_m = get_rotation(shape)
+                            angle = rot_m[0]    
+                            t = round( rot_m[1] / 10 )
+                            dirangle = abs( t ) if t == -0 else t    
+                            if dirangle < -1 or dirangle > 1:
+                                print("dirangle " + str(dirangle) + " out of limit. Skipping...")
+                                os.remove( imgpath )
+                                return
+
+                            print( "rotate angle " + str(angle) + " dirangle " + str(dirangle) )
+
+
                             for (x, y) in shape:
-                                    
+
                                 line = line + ";\""+str(x)+"~"+str(y)+"\""
 
                             file.write(line.encode())
                             file.write('\n'.encode()) 
+        
+          # Remove item into dir
+          if not FLAGS.is_keep_video_file:
+            os.remove(os.path.join( path, filename ) )
         else:
           
               for root, dirs, files in os.walk(path+filename, topdown=False):
@@ -107,11 +186,11 @@ def resize( path ):
                      
                       if (name.endswith(ext)): #or .avi, .mpeg, whatever.
 
-                         os.system("ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path+filename, name ), os.path.join(path+filename, name+"%d.jpeg" )))     
+                         os.system("ffmpeg -i {0} -f image2 -vf fps=fps="+FLAGS.fps+" {1}".format( os.path.join( path+filename, name ), os.path.join(path+filename, name+"%d.jpeg" )))     
 
                          items1 = os.listdir(root+"/")
 
-                         with open(os.path.join( path+"/out", name+"_dir.csv"), 'wb' ) as file:
+                         with open(os.path.join( FLAGS.oc, name+"_dir.csv"), 'wb' ) as file:
 
                               for item in items1:
 

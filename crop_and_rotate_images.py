@@ -142,6 +142,15 @@ def get_rotation_and_translation_matrix(csv_row, scale, imgpath_org):
 
         return rotation_vector, [], imgpath, "", "1_" + os.path.basename(imgpath), os.path.basename(os.path.dirname(imgpath)) + ".1/"
 
+def scale_if_small(imgpath, min_width_limit, savepath, scale_by=2.5):
+  im = Image.open( imgpath )
+  if im.size[0] < min_width_limit:
+    basewidth = im.size[0] * scale
+    wpercent = (basewidth/float(im.size[0]))
+    hsize = int((float(im.size[1])*float(wpercent)))
+    im = im.resize((basewidth,hsize), Image.ANTIALIAS)
+    im.save(savepath) 
+
 def do_rotation(csv_row, is_man):
 
     #
@@ -165,7 +174,12 @@ def do_rotation(csv_row, is_man):
         got_here
         return
 
+    #
+    scale_if_small(imgpath_org, 33, imgpath_org)
+
     images = cv2.imread( imgpath_org )
+
+    # images = imutils.resize(images, width=500)
     gray = cv2.cvtColor(images, cv2.COLOR_BGR2GRAY) 
     f, e = os.path.splitext( imgpath_org )
     rects = detector(gray, 1)
