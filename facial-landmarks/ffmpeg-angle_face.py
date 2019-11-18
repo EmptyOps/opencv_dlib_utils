@@ -171,6 +171,9 @@ def resize( path ):
 
                         rects = detector(gray, 1)
 
+                        if len(rects) <= 0:
+                          print("No face detected. Skipping...")
+
                         for (i, rect) in enumerate(rects):
 
                             line = "\""+item+"~"+str(i)+"\";"
