@@ -188,7 +188,8 @@ def resize( path ):
                             dirangle = abs( t ) if t == -0 else t    
                             if dirangle < -1 or dirangle > 1:
                                 print("dirangle " + str(dirangle) + " out of limit. Skipping...")
-                                os.remove( imgpath )
+                                if os.path.exists(imgpath):
+                                  os.remove( imgpath )
                                 continue
 
                             print( "rotate angle " + str(angle) + " dirangle " + str(dirangle) )
