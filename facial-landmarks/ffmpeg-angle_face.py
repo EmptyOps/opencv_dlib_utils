@@ -5,6 +5,11 @@ import argparse
 import imutils
 import dlib
 import cv2
+from PIL import Image
+
+from numpy import array
+import numpy as np
+
 
 ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
 
@@ -53,6 +58,18 @@ def toint(str):
   finally:
     pass
 
+def num_float_first(s):
+    try:
+        return float(s)
+    except ValueError:
+        return int(s)
+
+def to_x_y(strng):
+    # cords = strng.split('~')
+
+    # return [ num_float_first(cords[0]), num_float_first(cords[1]) ]
+    return [ strng[0], strng[1] ]
+
 def get_rotation(csv_row):
 
       rotation_vector = []
@@ -99,6 +116,13 @@ def scale_if_small(imgpath, min_width_limit, savepath, scale_by=2.5):
     im.save(savepath) 
 
 def resize( path ):
+
+    if not os.path.exists( FLAGS.output_dir_for_csv_files ):
+      os.mkdir( FLAGS.output_dir_for_csv_files )
+
+    if not os.path.exists( FLAGS.extracted_images_dir ):
+      os.mkdir( FLAGS.extracted_images_dir )
+
     items = os.listdir(path)
 
     for filename in items:
@@ -108,18 +132,20 @@ def resize( path ):
             # outdir = os.path.join( path, filename+"_dir" )
             # os.makedirs( outdir )
             # os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, "output%d.jpeg" ) ) )
-            imgdir = os.path.join(FLAGS.oi, filename)
+            imgdir = os.path.join(FLAGS.extracted_images_dir, filename)
             if not os.path.exists( imgdir ):
               os.mkdir( imgdir )
 
             #single image only for testing "-vframes 50"
-            os.system( "ffmpeg -i {0} -f image2 -vf fps=fps="+FLAGS.fps+" {1}".format( os.path.join( path, filename ), os.path.join( imgdir, "%d.jpeg" ) ) )     
+            os.system( "ffmpeg -i {0} -f image2 -vf fps=fps={1} {2}".format( os.path.join( path, filename ), FLAGS.fps, os.path.join( imgdir, "%d.jpeg" ) ) )     
 
+            print("sorting by names")
             items1 = os.listdir( imgdir ) 
             items1 = sorted(items1,key=lambda x: toint(os.path.splitext(x)[0]))
+            print("sorting by names done")
 
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
-            with open(os.path.join( FLAGS.oc, filename+".csv"), 'wb' ) as file:
+            with open(os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv"), 'wb' ) as file:
 
                 for item in items1:
 
@@ -163,7 +189,7 @@ def resize( path ):
                             if dirangle < -1 or dirangle > 1:
                                 print("dirangle " + str(dirangle) + " out of limit. Skipping...")
                                 os.remove( imgpath )
-                                return
+                                continue
 
                             print( "rotate angle " + str(angle) + " dirangle " + str(dirangle) )
 
@@ -175,9 +201,9 @@ def resize( path ):
                             file.write(line.encode())
                             file.write('\n'.encode()) 
         
-          # Remove item into dir
-          if not FLAGS.is_keep_video_file:
-            os.remove(os.path.join( path, filename ) )
+            # Remove item into dir
+            if not FLAGS.is_keep_video_file:
+              os.remove(os.path.join( path, filename ) )
         else:
           
               for root, dirs, files in os.walk(path+filename, topdown=False):
