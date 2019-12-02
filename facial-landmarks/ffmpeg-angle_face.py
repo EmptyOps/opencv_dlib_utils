@@ -146,7 +146,7 @@ def resize( path ):
 
             #assert duplicates 
             if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv") ):
-              error("Fatal error duplicate file "+filename+" detected. Terminating script")
+              raise Exception("Fatal error duplicate file "+filename+" detected. Terminating script")
 
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
             with open(os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv"), 'wb' ) as file:
