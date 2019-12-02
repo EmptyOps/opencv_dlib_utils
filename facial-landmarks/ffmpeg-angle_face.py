@@ -32,6 +32,7 @@ parser.add_argument('-f', '--fps', type=str, nargs='?',
                     help='image extract per fps')
 parser.add_argument('-ikv', '--is_keep_video_file', action='store_true', help='A boolean True False')
 parser.add_argument('-isd', '--is_skip_dirs_and_other_files', action='store_true', help='A boolean True False')
+parser.add_argument('-isu', '--is_skip_duplicates', action='store_true', help='A boolean True False')
 
 parser.add_argument('-oc', '--output_dir_for_csv_files', type=str, nargs='?',
                     help='output_dir_for_csv_files')
@@ -130,6 +131,13 @@ def resize( path ):
 
         if (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
 
+            #assert duplicates 
+            if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv") ):
+              if FLAGS.is_skip_duplicates:
+                continue
+              else:
+                raise Exception("Fatal error duplicate file "+filename+" detected. Terminating script")
+
             # outdir = os.path.join( path, filename+"_dir" )
             # os.makedirs( outdir )
             # os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, "output%d.jpeg" ) ) )
@@ -144,10 +152,6 @@ def resize( path ):
             items1 = os.listdir( imgdir ) 
             items1 = sorted(items1,key=lambda x: toint(os.path.splitext(x)[0]))
             print("sorting by names done")
-
-            #assert duplicates 
-            if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv") ):
-              raise Exception("Fatal error duplicate file "+filename+" detected. Terminating script")
 
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
             with open(os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv"), 'wb' ) as file:
