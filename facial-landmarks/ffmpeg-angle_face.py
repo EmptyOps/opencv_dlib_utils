@@ -31,6 +31,7 @@ parser.add_argument('-ik', '--is_keep_extracted_image', action='store_true', hel
 parser.add_argument('-f', '--fps', type=str, nargs='?',
                     help='image extract per fps')
 parser.add_argument('-ikv', '--is_keep_video_file', action='store_true', help='A boolean True False')
+parser.add_argument('-isd', '--is_skip_dirs_and_other_files', action='store_true', help='A boolean True False')
 
 parser.add_argument('-oc', '--output_dir_for_csv_files', type=str, nargs='?',
                     help='output_dir_for_csv_files')
@@ -214,6 +215,9 @@ def resize( path ):
             if not FLAGS.is_keep_video_file:
               os.remove(os.path.join( path, filename ) )
         else:
+
+              if FLAGS.is_skip_dirs_and_other_files:
+                continue
           
               for root, dirs, files in os.walk(path+filename, topdown=False):
 
@@ -225,7 +229,7 @@ def resize( path ):
 
                          items1 = os.listdir(root+"/")
 
-                         with open(os.path.join( FLAGS.oc, name+"_dir.csv"), 'wb' ) as file:
+                         with open(os.path.join( FLAGS.output_dir_for_csv_files, name+"_dir.csv"), 'wb' ) as file:
 
                               for item in items1:
 
