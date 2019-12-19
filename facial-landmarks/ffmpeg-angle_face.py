@@ -127,9 +127,21 @@ def resize( path ):
 
     items = os.listdir(path)
 
-    for filename in items:
+    for filenameGlb in items:
 
-        if (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
+        if True or (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
+
+          files = []
+          if (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
+            files.append( filenameGlb )
+          elif os.isdir(filenameGlb):
+            files = os.listdir(filenameGlb)
+          elif FLAGS.is_skip_dirs_and_other_files:
+            continue
+          else:
+            raise Exception("Unsupported filetype found")
+
+          for filename in files:
 
             #assert duplicates 
             if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv") ):
