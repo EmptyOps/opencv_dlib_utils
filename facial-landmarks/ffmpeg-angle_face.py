@@ -132,10 +132,13 @@ def resize( path ):
         if True or (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
 
           files = []
+          prefix = ""
           if (filenameGlb.endswith(ext)): #or .avi, .mpeg, whatever. 
             files.append( filenameGlb )
-          elif os.path.isdir(filenameGlb):
-            files = os.listdir(filenameGlb)
+          elif os.path.isdir( os.path.join( path, filenameGlb ) ):
+            prefix = filenameGlb+"_"
+            path = os.path.join( path, filenameGlb )
+            files = os.listdir(path)
           elif FLAGS.is_skip_dirs_and_other_files:
             continue
           else:
@@ -144,16 +147,16 @@ def resize( path ):
           for filename in files:
 
             #assert duplicates 
-            if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv") ):
+            if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, prefix + filename+".csv") ):
               if FLAGS.is_skip_duplicates:
                 continue
               else:
-                raise Exception("Fatal error duplicate file "+filename+" detected. Terminating script")
+                raise Exception("Fatal error duplicate file "+prefix + filename+" detected. Terminating script")
 
             # outdir = os.path.join( path, filename+"_dir" )
             # os.makedirs( outdir )
             # os.system( "ffmpeg -i {0} -f image2 -vf fps=fps=1 {1}".format( os.path.join( path, filename ), os.path.join( path, "output%d.jpeg" ) ) )
-            imgdir = os.path.join(FLAGS.extracted_images_dir, filename)
+            imgdir = os.path.join(FLAGS.extracted_images_dir, prefix + filename)
             if not os.path.exists( imgdir ):
               os.mkdir( imgdir )
 
@@ -166,7 +169,7 @@ def resize( path ):
             print("sorting by names done")
 
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
-            with open(os.path.join( FLAGS.output_dir_for_csv_files, filename+".csv"), 'wb' ) as file:
+            with open(os.path.join( FLAGS.output_dir_for_csv_files, prefix + filename+".csv"), 'wb' ) as file:
 
                 for item in items1:
 
