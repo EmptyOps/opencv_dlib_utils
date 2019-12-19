@@ -139,7 +139,7 @@ def resize( path ):
           elif FLAGS.is_skip_dirs_and_other_files:
             continue
           else:
-            raise Exception("Unsupported filetype found")
+            raise Exception("Unsupported filetype '"+filenameGlb+"' found")
 
           for filename in files:
 
