@@ -132,7 +132,7 @@ def resize( path ):
         if True or (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
 
           files = []
-          if (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
+          if (filenameGlb.endswith(ext)): #or .avi, .mpeg, whatever. 
             files.append( filenameGlb )
           elif os.isdir(filenameGlb):
             files = os.listdir(filenameGlb)
