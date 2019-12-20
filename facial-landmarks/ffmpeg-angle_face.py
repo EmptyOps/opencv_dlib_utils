@@ -136,7 +136,7 @@ def resize( path ):
           prefix = ""
           if (filenameGlb.endswith(ext)): #or .avi, .mpeg, whatever. 
             files.append( filenameGlb )
-          elif os.path.isdir( os.path.join( path, filenameGlb ) ):
+          elif os.path.isdir( os.path.join( pathOrg, filenameGlb ) ):
             prefix = filenameGlb+"_"
             path = os.path.join( pathOrg, filenameGlb )
             files = os.listdir(path)
