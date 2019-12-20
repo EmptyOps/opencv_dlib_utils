@@ -127,6 +127,7 @@ def resize( path ):
 
     items = os.listdir(path)
 
+    pathOrg = path
     for filenameGlb in items:
 
         if True or (filename.endswith(ext)): #or .avi, .mpeg, whatever. 
@@ -137,7 +138,7 @@ def resize( path ):
             files.append( filenameGlb )
           elif os.path.isdir( os.path.join( path, filenameGlb ) ):
             prefix = filenameGlb+"_"
-            path = os.path.join( path, filenameGlb )
+            path = os.path.join( pathOrg, filenameGlb )
             files = os.listdir(path)
           elif FLAGS.is_skip_dirs_and_other_files:
             continue
