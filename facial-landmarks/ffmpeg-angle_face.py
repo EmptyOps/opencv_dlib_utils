@@ -13,42 +13,9 @@ import numpy as np
 
 ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
 
-import argparse
+ext = (".avi", ".mp4", ".mpeg")
 
-# Instantiate the parser
-parser = argparse.ArgumentParser(description='a crop utility')
-
-ext = (".avi", ".mp4")
-
-# Argument are :-- shape_predictor_68_face_landmarks.dat
-parser.add_argument('-p', '--shape-predictor', type=str, nargs='?',
-    help='path to facial landmark predictor')
-
-parser.add_argument('-d', '--dir_to_process', type=str, nargs='?',
-                    help='dir_to_process')
-parser.add_argument('-ik', '--is_keep_extracted_image', action='store_true', help='A boolean True False')
-
-parser.add_argument('-f', '--fps', type=str, nargs='?',
-                    help='image extract per fps')
-parser.add_argument('-ikv', '--is_keep_video_file', action='store_true', help='A boolean True False')
-parser.add_argument('-isd', '--is_skip_dirs_and_other_files', action='store_true', help='A boolean True False')
-parser.add_argument('-isu', '--is_skip_duplicates', action='store_true', help='A boolean True False')
-
-parser.add_argument('-oc', '--output_dir_for_csv_files', type=str, nargs='?',
-                    help='output_dir_for_csv_files')
-parser.add_argument('-oi', '--extracted_images_dir', type=str, nargs='?',
-                    help='os.path.join(FLAGS.oi, filename)')
-
-
-FLAGS = parser.parse_args()
-
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(FLAGS.shape_predictor)
-
-if FLAGS.dir_to_process == "":
-    paths = []  #specify static here
-else:
-    paths = [FLAGS.dir_to_process+"/"]
+FLAGS = None
 
 def toint(str):
   try:
@@ -108,6 +75,84 @@ def get_rotation(csv_row):
 
       return rotation_vector
 
+def face_coords(csv_row):
+
+    face_cords = []
+
+    #face coords 
+    xtl, _, _ = to_x_y_z( csv_row[2] )
+    _, ytl, _ = to_x_y_z( csv_row[21] )
+    _, ybr, _ = to_x_y_z( csv_row[10] )
+    xbr, _, _ = to_x_y_z( csv_row[18] )   
+    _, ytr, _ = to_x_y_z( csv_row[26] )
+
+    if ytl < ytr:
+        ytr = ytl
+    else:
+        ytl = ytr
+
+    face_cords.append( xtl )
+    face_cords.append( ytl )
+    face_cords.append( xbr )
+    face_cords.append( ybr )        
+
+    #
+    magnitude = face_cords[2] - face_cords[0] if (face_cords[2] - face_cords[0]) > (face_cords[3]-face_cords[1]) else face_cords[3]-face_cords[1]    
+    if magnitude <= 0:
+        face_cords = [ 0, 0, 0, 0 ]
+        return face_cords
+
+    face_image_padding = int( 20 * (magnitude/25) ) 
+
+    #
+    if dirangle < -2:
+        face_image_padding = face_image_padding + int( 10 * (magnitude/25) )
+    elif dirangle > 2:
+        face_image_padding = face_image_padding + int( 10 * (magnitude/25) )    
+
+    #
+    # if dirangle < 0:
+    xbr = xbr + face_image_padding
+    # elif dirangle > 0:
+    xtl = xtl - face_image_padding if xtl - face_image_padding > 0 else 0
+
+    ytl = ytl - face_image_padding
+    ybr = ybr + face_image_padding    
+
+    xtr = xbr
+    xbl = xtl 
+    ybl = ybr
+
+    #
+    n = to_x_y( csv_row[35] )
+    if xbr <= n[0]:
+        xbr = n[0] + ((n[0]-xtl)/5)
+
+    if ybr <= n[1]:
+        ybr = n[0] + ((n[0]-xtl)/5)
+
+    #
+    xtl = xtl if xtl > 0 else 0
+    ytl = ytl if ytl > 0 else 0
+    xbr = xbr if xbr < im.size[0] else im.size[0]
+    ybr = ybr if ybr < im.size[1] else im.size[1]
+
+    #hiren added below line on 08-03-2020 as it seems like a bug as forgot to reset face_cords so just reset it
+    face_cords = []
+
+    face_cords.append( xtl )
+    face_cords.append( ytl )
+    face_cords.append( xbr )
+    face_cords.append( ybr )        
+
+    return face_cords
+
+def face_wh(csv_row):
+
+    face_cords = face_coords(csv_row)
+
+    return face_cords[2]-face_cords[0], face_cords[3]-face_cords[1]
+
 def scale_if_small(imgpath, min_width_limit, savepath, scale_by=2.5):
   im = Image.open( imgpath )
   if im.size[0] < min_width_limit:
@@ -117,7 +162,10 @@ def scale_if_small(imgpath, min_width_limit, savepath, scale_by=2.5):
     im = im.resize((basewidth,hsize), Image.ANTIALIAS)
     im.save(savepath) 
 
-def resize( path ):
+def resize( path, FLAGSLcl ):
+
+    #
+    FLAGS = FLAGSLcl
 
     if not os.path.exists( FLAGS.output_dir_for_csv_files ):
       os.mkdir( FLAGS.output_dir_for_csv_files )
@@ -125,7 +173,16 @@ def resize( path ):
     if not os.path.exists( FLAGS.extracted_images_dir ):
       os.mkdir( FLAGS.extracted_images_dir )
 
-    items = os.listdir(path)
+    is_passed = False
+    is_single_file = False
+
+    #check if video file path then treat it as such 
+    if os.path.isfile( path ):
+      is_single_file = True
+      items = [ os.path.basename(path) ]
+      path = os.path.dirname(path)
+    else:
+      items = os.listdir(path)
 
     pathOrg = path
     for filenameGlb in items:
@@ -172,7 +229,15 @@ def resize( path ):
             # with os.system(os.path.join( outdir, open(filename+"_dir.csv", 'wb' ))) as file:
             with open(os.path.join( FLAGS.output_dir_for_csv_files, prefix + filename+".csv"), 'wb' ) as file:
 
+                itemcnt = 0
+                totitem = len(items1)
+
                 for item in items1:
+
+                    itemcnt += 1
+                    if not is_passed and FLAGS.skip_if_filter_fails_initially > 0 and (itemcnt/totitem) * 100 >= FLAGS.skip_if_filter_fails_initially:
+                      # #is_passed = False
+                      return False
 
                     if item == '.DS_Store':
                        continue
@@ -203,6 +268,9 @@ def resize( path ):
                         for (i, rect) in enumerate(rects):
 
                             line = "\""+item+"~"+str(i)+"\";"
+                            if FLAGS.skip_if_filter_fails_initially > 0:
+                              csv_row_tmp = []
+                              csv_row_tmp.append( "\""+item+"~"+str(i)+"\"" )
 
                             # determine the facial landmarks for the face region, then
                             # convert the facial landmark (x, y)-coordinates to a NumPy
@@ -212,7 +280,7 @@ def resize( path ):
 
                             #
                             rot_m = get_rotation(shape)
-                            angle = rot_m[0]    
+                            angle = rot_m[0]     
                             t = round( rot_m[1] / 10 )
                             dirangle = abs( t ) if t == -0 else t    
                             if dirangle < -1 or dirangle > 1:
@@ -227,6 +295,17 @@ def resize( path ):
                             for (x, y) in shape:
 
                                 line = line + ";\""+str(x)+"~"+str(y)+"\""
+
+                                if FLAGS.skip_if_filter_fails_initially > 0:
+                                  csv_row_tmp.append( "\""+item+"~"+str(i)+"\"" )
+
+                            if FLAGS.skip_if_filter_fails_initially > 0:
+                              w, h = face_wh( csv_row_tmp )
+
+                              if w < FLAGS.filter_int_val_1 or h < FLAGS.filter_int_val_2:
+                                continue
+                              else:
+                                is_passed = True
 
                             file.write(line.encode())
                             file.write('\n'.encode()) 
@@ -291,5 +370,53 @@ def resize( path ):
                                   else:
                                         continue                     
                
-for path in paths:
-    resize( path )
+    if is_single_file:
+        if is_passed:
+          return True
+        else:
+          return False
+
+
+if __name__ == '__main__':
+  import argparse
+
+  # Instantiate the parser
+  parser = argparse.ArgumentParser(description='a crop utility')
+
+  # Argument are :-- shape_predictor_68_face_landmarks.dat
+  parser.add_argument('-p', '--shape-predictor', type=str, nargs='?',
+      help='path to facial landmark predictor')
+
+  parser.add_argument('-d', '--dir_to_process', type=str, nargs='?',
+                      help='dir_to_process')
+  parser.add_argument('-ik', '--is_keep_extracted_image', action='store_true', help='A boolean True False')
+
+  parser.add_argument('-f', '--fps', type=str, nargs='?',
+                      help='image extract per fps')
+  parser.add_argument('-ikv', '--is_keep_video_file', action='store_true', help='A boolean True False')
+  parser.add_argument('-isd', '--is_skip_dirs_and_other_files', action='store_true', help='A boolean True False')
+  parser.add_argument('-isu', '--is_skip_duplicates', action='store_true', help='A boolean True False')
+
+  parser.add_argument('--filter_int_val_1',type=int, nargs='?',help='filter_int_val_1')
+  parser.add_argument('--filter_int_val_2',type=int, nargs='?',help='filter_int_val_2')
+
+  parser.add_argument('-oc', '--output_dir_for_csv_files', type=str, nargs='?',
+                      help='output_dir_for_csv_files')
+  parser.add_argument('-oi', '--extracted_images_dir', type=str, nargs='?',
+                      help='extracted_images_dir')
+
+  parser.add_argument('-skp', '--skip_if_filter_fails_initially', type=int, nargs='?', help=' pass -1 to ignore')
+
+
+  FLAGS = parser.parse_args()
+
+  detector = dlib.get_frontal_face_detector()
+  predictor = dlib.shape_predictor(FLAGS.shape_predictor)
+
+  if FLAGS.dir_to_process == "":
+      paths = []  #specify static here
+  else:
+      paths = [FLAGS.dir_to_process+"/"]
+
+  for path in paths:
+      resize( path, FLAGS )
