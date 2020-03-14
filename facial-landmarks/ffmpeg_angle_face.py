@@ -16,6 +16,8 @@ ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
 ext = (".avi", ".mp4", ".mpeg")
 
 FLAGS = None
+detector = None
+predictor = None
 
 def toint(str):
   try:
@@ -32,6 +34,11 @@ def num_float_first(s):
         return float(s)
     except ValueError:
         return int(s)
+
+def to_x_y_0(strng):
+    cords = strng.split('~')
+
+    return [ num_float_first(cords[0]), num_float_first(cords[1]) ]
 
 def to_x_y(strng):
     # cords = strng.split('~')
@@ -75,16 +82,16 @@ def get_rotation(csv_row):
 
       return rotation_vector
 
-def face_coords(csv_row):
+def face_coords(csv_row, dirangle, width, height):
 
     face_cords = []
 
     #face coords 
-    xtl, _, _ = to_x_y_z( csv_row[2] )
-    _, ytl, _ = to_x_y_z( csv_row[21] )
-    _, ybr, _ = to_x_y_z( csv_row[10] )
-    xbr, _, _ = to_x_y_z( csv_row[18] )   
-    _, ytr, _ = to_x_y_z( csv_row[26] )
+    xtl, _ = to_x_y_0( csv_row[2] )
+    _, ytl = to_x_y_0( csv_row[21] )
+    _, ybr = to_x_y_0( csv_row[10] )
+    xbr, _ = to_x_y_0( csv_row[18] )   
+    _, ytr = to_x_y_0( csv_row[26] )
 
     if ytl < ytr:
         ytr = ytl
@@ -124,7 +131,7 @@ def face_coords(csv_row):
     ybl = ybr
 
     #
-    n = to_x_y( csv_row[35] )
+    n = to_x_y_0( csv_row[35] )
     if xbr <= n[0]:
         xbr = n[0] + ((n[0]-xtl)/5)
 
@@ -134,8 +141,8 @@ def face_coords(csv_row):
     #
     xtl = xtl if xtl > 0 else 0
     ytl = ytl if ytl > 0 else 0
-    xbr = xbr if xbr < im.size[0] else im.size[0]
-    ybr = ybr if ybr < im.size[1] else im.size[1]
+    xbr = xbr if xbr < width else width     # im.size[0] else im.size[0]
+    ybr = ybr if ybr < height else height   # im.size[1] else im.size[1]
 
     #hiren added below line on 08-03-2020 as it seems like a bug as forgot to reset face_cords so just reset it
     face_cords = []
@@ -147,9 +154,9 @@ def face_coords(csv_row):
 
     return face_cords
 
-def face_wh(csv_row):
+def face_wh(csv_row, dirangle, width, height):
 
-    face_cords = face_coords(csv_row)
+    face_cords = face_coords(csv_row, dirangle, width, height)
 
     return face_cords[2]-face_cords[0], face_cords[3]-face_cords[1]
 
@@ -162,7 +169,7 @@ def scale_if_small(imgpath, min_width_limit, savepath, scale_by=2.5):
     im = im.resize((basewidth,hsize), Image.ANTIALIAS)
     im.save(savepath) 
 
-def resize( path, FLAGSLcl ):
+def resize( path, FLAGSLcl, detector, predictor ):
 
     #
     FLAGS = FLAGSLcl
@@ -236,7 +243,7 @@ def resize( path, FLAGSLcl ):
 
                     itemcnt += 1
                     if not is_passed and FLAGS.skip_if_filter_fails_initially > 0 and (itemcnt/totitem) * 100 >= FLAGS.skip_if_filter_fails_initially:
-                      # #is_passed = False
+                      print("returning after no pass even after ", FLAGS.skip_if_filter_fails_initially, " percent checks")
                       return False
 
                     if item == '.DS_Store':
@@ -250,6 +257,7 @@ def resize( path, FLAGSLcl ):
 
                         # load the input image, resize it, and convert it to grayscale
                         images = cv2.imread( imgpath ) 
+                        height, width, channels = images.shape
 
                         # images = imutils.resize(images, width=500)
                         gray = cv2.cvtColor(images, cv2.COLOR_BGR2GRAY) 
@@ -270,7 +278,8 @@ def resize( path, FLAGSLcl ):
                             line = "\""+item+"~"+str(i)+"\";"
                             if FLAGS.skip_if_filter_fails_initially > 0:
                               csv_row_tmp = []
-                              csv_row_tmp.append( "\""+item+"~"+str(i)+"\"" )
+                              csv_row_tmp.append( ""+item+"~"+str(i)+"" )
+                              csv_row_tmp.append( "" )
 
                             # determine the facial landmarks for the face region, then
                             # convert the facial landmark (x, y)-coordinates to a NumPy
@@ -297,10 +306,10 @@ def resize( path, FLAGSLcl ):
                                 line = line + ";\""+str(x)+"~"+str(y)+"\""
 
                                 if FLAGS.skip_if_filter_fails_initially > 0:
-                                  csv_row_tmp.append( "\""+item+"~"+str(i)+"\"" )
+                                  csv_row_tmp.append( ""+str(x)+"~"+str(y)+"" )
 
                             if FLAGS.skip_if_filter_fails_initially > 0:
-                              w, h = face_wh( csv_row_tmp )
+                              w, h = face_wh( csv_row_tmp, dirangle, width, height )
 
                               if w < FLAGS.filter_int_val_1 or h < FLAGS.filter_int_val_2:
                                 continue
@@ -419,4 +428,4 @@ if __name__ == '__main__':
       paths = [FLAGS.dir_to_process+"/"]
 
   for path in paths:
-      resize( path, FLAGS )
+      resize( path, FLAGS, detector, predictor )
