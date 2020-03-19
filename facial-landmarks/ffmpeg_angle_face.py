@@ -6,6 +6,7 @@ import imutils
 import dlib
 import cv2
 from PIL import Image
+import shutil
 
 from numpy import array
 import numpy as np
@@ -244,6 +245,7 @@ def resize( path, FLAGSLcl, detector, predictor ):
                     itemcnt += 1
                     if not is_passed and FLAGS.skip_if_filter_fails_initially > 0 and (itemcnt/totitem) * 100 >= FLAGS.skip_if_filter_fails_initially:
                       print("returning after no pass even after ", FLAGS.skip_if_filter_fails_initially, " percent checks")
+                      shutil.rmtree(imgdir)
                       return False
 
                     if item == '.DS_Store':
