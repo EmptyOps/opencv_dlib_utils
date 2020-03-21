@@ -216,7 +216,7 @@ def resize( path, FLAGSLcl, detector, predictor ):
             if os.path.exists( os.path.join( FLAGS.output_dir_for_csv_files, prefix + filename+".csv") ):
               if FLAGS.is_skip_duplicates:
                 continue
-              else:
+              elif not FLAGS.is_overwrite_duplicates:
                 raise Exception("Fatal error duplicate file "+prefix + filename+" detected. Terminating script")
 
             # outdir = os.path.join( path, filename+"_dir" )
@@ -407,6 +407,8 @@ if __name__ == '__main__':
   parser.add_argument('-ikv', '--is_keep_video_file', action='store_true', help='A boolean True False')
   parser.add_argument('-isd', '--is_skip_dirs_and_other_files', action='store_true', help='A boolean True False')
   parser.add_argument('-isu', '--is_skip_duplicates', action='store_true', help='A boolean True False')
+  parser.add_argument('-iod', '--is_overwrite_duplicates', action='store_true', help='A boolean True False')
+  
 
   parser.add_argument('--filter_int_val_1',type=int, nargs='?',help='filter_int_val_1')
   parser.add_argument('--filter_int_val_2',type=int, nargs='?',help='filter_int_val_2')
